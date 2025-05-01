@@ -1,26 +1,37 @@
+# git@github.com:ihaveaword/emailsending.git
 # 使用 smtplib 模块发送纯文本邮件
 import smtplib
 import time  # 👈 新增导入
 import ssl
 from email.message import EmailMessage
+from getpass import getpass
 
 BATCH_SIZE = 10  # 👈 每批发送5封
 WAIT_TIME = 70   # 批次间隔秒数(建议大于60秒)
 SERVER_TIMEOUT = 30  # 服务器超时时间
 success_count = 0  # 成功计数
 
-EMAIL_ADDRESS = "z13503876281@163.com"  # 邮箱的地址
-EMAIL_PASSWORD = "QAssy32xrDDFVZrf"  # 授权码
+EMAIL_ADDRESS = input("请输入邮箱地址: ").strip()
+EMAIL_PASS=None
+if EMAIL_PASS is None:
+    # 绕开IDE的getpass显示问题
+    print("请在此输入授权码 >>> ", end='', flush=True)  # 强制显示输入提示
+    try:
+        # 尝试兼容IDE的输入方式
+        EMAIL_PASS = input()
+    except:
+        # 回退到getpass
+        EMAIL_PASS = getpass("请输入邮箱授权码: ").strip()
 
 # 使用ssl模块的context加载系统允许的证书，在登录时进行验证
 context = ssl.create_default_context()
 
-with open(r'E:\desktop\助管工作\邮件\contacts.txt', 'r', encoding='utf-8') as f:
+with open(r'E:\desktop\助管工作\emailsending\emailcode\contacts.txt', 'r', encoding='utf-8') as f:
     contacts = [line.strip() for line in f if line.strip()]
 
 # contacts = ['1509853371@qq.com', '1245700643@qq.com']
 subject = "你好"
-# body = "邮件主体内容"
+body = "这是一个邮件发送测试，无需回复"
 # msg = EmailMessage()
 # msg['subject'] = subject  # 邮件标题
 # msg['From'] = EMAIL_ADDRESS  # 邮件发件人
@@ -28,9 +39,9 @@ subject = "你好"
 # msg.set_content(body)  # 使用set_content()方法设置邮件的主体内容
 
 # 读取附件内容（在循环外只需一次读取，避免重复IO操作）
-# filename = r'E:\图片\极乐迪斯科\海报.jpg'
-# with open(filename, 'rb') as f:
-#     filedata = f.read()  # 提前读取附件二进制数据
+filename = r'E:\图片\极乐迪斯科\海报.jpg'
+with open(filename, 'rb') as f:
+    filedata = f.read()  # 提前读取附件二进制数据
 
 # 使用同一个SMTP连接批量发送（高效）
 for idx in range(0, len(contacts), BATCH_SIZE):
@@ -39,7 +50,7 @@ for idx in range(0, len(contacts), BATCH_SIZE):
 
     try:
         with smtplib.SMTP_SSL("smtp.163.com", 465, context=context) as smtp:
-            smtp.login(EMAIL_ADDRESS, EMAIL_PASSWORD)
+            smtp.login(EMAIL_ADDRESS, EMAIL_PASS)
 
             for contact in batch:
                 # ------------------------------
@@ -47,27 +58,27 @@ for idx in range(0, len(contacts), BATCH_SIZE):
                 # ------------------------------
                 msg = EmailMessage()
                 msg['Subject'] = subject  # 邮件标题（注意Subject首字母大写规范）
-                msg['From'] = EMAIL_ADDRESS
+                msg['From'] = EMAIL_ADDRESS  # 邮件发件人
                 msg['To'] = contact  # 逐个发送，收件人只能看到自己
-                msg.set_content("这是一个邮件发送测试，无需回复")  # 正文内容
+                msg.set_content(body)  # 正文内容
 
                 # 添加附件（复用已读取的filedata）
-                # msg.add_attachment(
-                #     filedata,
-                #     maintype='image',
-                #     subtype='jpeg',
-                #     filename='海报.jpg'  # 可自定义显示的附件名
-                # )
+                msg.add_attachment(
+                    filedata,
+                    maintype='image',
+                    subtype='jpeg',
+                    filename='海报.jpg'  # 可自定义显示的附件名
+                )
                 try:
                     smtp.send_message(msg)
                     success_count += 1
                     print(f"[>] 已发送 {success_count} 封 | {contact}")
                 except Exception as e:
                     print(f"[!] 发送失败 {contact}：{str(e)}")
-            time.sleep(WAIT_TIME)  # 👈正确的等待位置（应在外层with之后）
+            # time.sleep(WAIT_TIME)  # 👈正确的等待位置（应在外层with之后）
         # 批次间隔（仅成功批次后等待）
         print(f"—— 完成批次 {idx // BATCH_SIZE + 1} —— 即将等待 {WAIT_TIME}s ——")
-        # time.sleep(WAIT_TIME)
+        time.sleep(WAIT_TIME)
 
     except smtplib.SMTPServerDisconnected:
         print("[!] 连接意外断开，将重连继续发送下一批次...")

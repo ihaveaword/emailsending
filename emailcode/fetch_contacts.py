@@ -4,11 +4,23 @@ from email.header import decode_header
 from email.utils import parseaddr
 import email.message
 from email import message_from_bytes
+from getpass import getpass
 
-def get_senders(max_emails):
+def get_senders(max_emails, EMAIL_USER=None, EMAIL_PASS=None):
+    if EMAIL_USER is None:
+        EMAIL_USER = input("请输入邮箱地址: ").strip()
+    if EMAIL_PASS is None:
+        # 绕开IDE的getpass显示问题
+        print("请在此输入授权码 >>> ", end='', flush=True)  # 强制显示输入提示
+        try:
+            # 尝试兼容IDE的输入方式
+            EMAIL_PASS = input()
+        except:
+            # 回退到getpass
+            EMAIL_PASS = getpass("请输入邮箱授权码: ").strip()
+# def get_senders(max_emails):
     EMAIL_HOST = 'imap.163.com'
-    EMAIL_USER = 'z13503876281@163.com'
-    EMAIL_PASS = 'QAssy32xrDDFVZrf'
+
     imaplib.Commands = {**imaplib.Commands, 'ID': ('NONAUTH',)}  # 👈 新增此行
 
     with imaplib.IMAP4_SSL(EMAIL_HOST, 993) as imap:
@@ -55,7 +67,7 @@ def get_senders(max_emails):
         return senders
 
 if __name__ == "__main__":
-    senders = get_senders(max_emails=100)
+    senders = get_senders(max_emails=10)
     print(f"前{len(senders)}封邮件发件人：")
     for idx, sender in enumerate(senders, 1):
         print(f"{idx}. {sender}")
